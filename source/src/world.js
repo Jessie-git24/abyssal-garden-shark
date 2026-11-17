@@ -369,6 +369,9 @@ function makeWorld(D, T, flyPts, POSES) {
   const SCH = [[-2, -36, -10, 15, 520, 0.3, 1, 0.945], [8, -30, -70, 22, 420, 0.32, -1], [48, -30, 14, 18, 360, 0.3, 1], [-58, -30, -8, 11, 420, 0.28, -1, 0.3], [8, -36, 84, 16, 320, 0.28, 1],
     [-90, -28, -70, 25, 300, 0.3, 1], [95, -30, 70, 25, 300, 0.3, -1], [0, -22, 20, 30, 380, 0.34, -1], [-30, -30, -100, 18, 300, 0.3, 1], [16, -36, 30, 12, 300, 0.3, 1], [-48, -34, -58, 12, 300, 0.3, -1], [-45, -35, 38, 14, 320, 0.3, 1]];
   for (const s of SCH) { const ss = s[7] === undefined ? rnd() : s[7]; for (let i = 0; i < s[4]; i++) fish.push(s[0], s[1], s[2], s[3], rnd(), s[6] * 1.9 / s[3], s[5], ss); }
+  // sharks: [cx,cy,cz, orbitR, seed, angSpeed (~1 u/s), size, schoolSeed]; seeds chosen so fract(seed*7.7) < .86 (no gold stripe)
+  const sharks = [];
+  for (const s of [[-2, -36, -10, 22, 0.1, 1], [8, -30, -70, 35, 0.2, -1], [48, -30, 14, 28, 0.3, 1]]) sharks.push(s[0], s[1], s[2], s[3], s[4], s[5] * 1.0 / s[3], 3, 0.3);
   const mantas = [];
   for (const m of [[1, -28, 3.5, 14, 3.012, 0.085, 3.6, 0.1], [49, -31, 24.5, 5, 0.029, -0.08, 3.7, 0.4], [0, -14, -80, 34, 0.3, 0.06, 5.2, 0.7], [-50, -18, 20, 26, 5, -0.075, 3.8, 0.55], [10, -16, 86, 26, 2.2, 0.07, 4.4, 0.85], [20, -11, -20, 46, 4.2, -0.045, 5.6, 0.25]]) mantas.push(...m);
 
@@ -387,7 +390,7 @@ function makeWorld(D, T, flyPts, POSES) {
     for (let c = 0; c < nCells; c++) { const a = L[c]; for (let i = 0; i < a.length; i += 12) { for (let j = 0; j < 12; j++) data[k++] = a[i + j]; lo[c] = min(lo[c], a[i + 1] - 3); hi[c] = max(hi[c], a[i + 1] + 3); } }
     return { data, n, start, lo, hi };
   };
-  return { gy, glints: new Float32Array(glints), chunks: chunks.map(packC), props: props.map(packC), big: pack(big), bigF: pack(big, 2, 1.5), small: pack(small), solids: { data: new Float32Array(sol.data), ranges: sol.ranges }, bubbles: new Float32Array(bubbles), volD, gm, fish: new Float32Array(fish), mantas: new Float32Array(mantas), snow };
+  return { gy, glints: new Float32Array(glints), chunks: chunks.map(packC), props: props.map(packC), big: pack(big), bigF: pack(big, 2, 1.5), small: pack(small), solids: { data: new Float32Array(sol.data), ranges: sol.ranges }, bubbles: new Float32Array(bubbles), volD, gm, fish: new Float32Array(fish), sharks: new Float32Array(sharks), mantas: new Float32Array(mantas), snow };
 }
 const fract = (x) => x - floor(x);
 
@@ -552,6 +555,17 @@ function meshFish() {
   for (let i = 0; i < 5; i++) { const r = []; for (let k = 0; k < 6; k++) { const a = k / 6 * TAU; r.push(m.v(X[i], sin(a) * H[i], cos(a) * Wd[i])); } rings.push(r); }
   for (let i = 0; i < 4; i++) for (let k = 0; k < 6; k++) { const k2 = (k + 1) % 6; m.quad(rings[i][k], rings[i + 1][k], rings[i + 1][k2], rings[i][k2]); }
   const a = m.v(-0.33, 0, 0), b = m.v(-0.56, 0.2, 0), c = m.v(-0.47, 0, 0), d = m.v(-0.56, -0.2, 0);
+  m.tri(a, b, c); m.tri(a, c, d);
+  return m;
+}
+// shark: long tapered body, dorsal + pectoral fins, tall crescent tail (bigger upper lobe)
+function meshShark() {
+  const m = new Mesh(), N = 8, X = [0.5, 0.42, 0.28, 0.08, -0.15, -0.33, -0.45, -0.52], H = [0.01, 0.06, 0.09, 0.085, 0.06, 0.035, 0.022, 0.016], Wd = [0.01, 0.045, 0.07, 0.065, 0.045, 0.025, 0.015, 0.01], rings = [];
+  for (let i = 0; i < N; i++) { const r = []; for (let k = 0; k < 6; k++) { const a = k / 6 * TAU; r.push(m.v(X[i], sin(a) * H[i], cos(a) * Wd[i])); } rings.push(r); }
+  for (let i = 0; i < N - 1; i++) for (let k = 0; k < 6; k++) { const k2 = (k + 1) % 6; m.quad(rings[i][k], rings[i + 1][k], rings[i + 1][k2], rings[i][k2]); }
+  m.tri(m.v(0.12, 0.085, 0), m.v(-0.08, 0.085, 0), m.v(-0.02, 0.22, 0));
+  for (const sz of [-1, 1]) m.tri(m.v(0.2, -0.05, sz * 0.06), m.v(0.05, -0.06, sz * 0.06), m.v(-0.02, -0.12, sz * 0.22));
+  const a = m.v(-0.5, 0.02, 0), b = m.v(-0.8, 0.3, 0), c = m.v(-0.64, 0, 0), d = m.v(-0.7, -0.16, 0);
   m.tri(a, b, c); m.tri(a, c, d);
   return m;
 }

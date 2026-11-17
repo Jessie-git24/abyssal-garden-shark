@@ -512,7 +512,7 @@ struct VO { @builtin(position) cp: vec4f, @location(0) wp: vec3f, @location(1) n
   let S = normalize(cross(vec3f(0., 1., 0.), T)); let Up = cross(T, S);
   let off = S * ((h.y - .5) * 5. + sin(t * .6 + s * 40.) * .5) + Up * ((h.z - .5) * 3.2 + cos(t * .5 + s * 31.) * .4);
   var l = i.p * i.b.z * (.75 + .5 * h.z);
-  l.z += sin(t * 9. + s * 50. + l.x * 5.) * .22 * (.25 * i.b.z - l.x);
+  l.z += sin(t * 9. / max(1., i.b.z * 3.) + s * 50. + l.x * 5.) * .22 * (.25 * i.b.z - l.x);
   let w = P + off + T * l.x + Up * l.y + S * l.z;
   o.cp = g.vp * vec4f(w, 1.); o.wp = w; o.n = T * i.n.x + Up * i.n.y + S * i.n.z; o.op = i.p; o.sd = s;
   o.lt = shadow1(w);
